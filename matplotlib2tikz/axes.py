@@ -3,6 +3,7 @@
 from . import color
 
 import matplotlib as mpl
+from mpl_toolkits.mplot3d import Axes3D
 import numpy
 
 
@@ -48,10 +49,12 @@ class Axes(object):
                             )
                         data['pgfplots libs'].add('groupplots')
 
+        self.is_3d = isinstance(obj, Axes3D)
+
         self.axis_options = []
 
         # check if axes need to be displayed at all
-        if not obj.axison:
+        if not self.is_3d and not obj.axison:
             self.axis_options.append('hide x axis')
             self.axis_options.append('hide y axis')
 
@@ -67,6 +70,12 @@ class Axes(object):
         ylabel = obj.get_ylabel()
         if ylabel:
             self.axis_options.append('ylabel={' + ylabel + '}')
+        try:
+            zlabel = obj.get_zlabel()
+            if zlabel:
+                self.axis_options.append('zlabel={' + zlabel + '}')
+        except AttributeError:
+            pass
 
         # Axes limits.
         # Sort the limits so make sure that the smaller of the two is actually
@@ -79,12 +88,24 @@ class Axes(object):
         self.axis_options.append(
                 'ymin=%.15g' % ylim[0] + ', ymax=%.15g' % ylim[1]
                 )
+        try:
+            zlim = sorted(list(obj.get_zlim()))
+            self.axis_options.append(
+                    'zmin=%.15g' % zlim[0] + ', zmax=%.15g' % zlim[1]
+                    )
+        except AttributeError:
+            pass
 
         # axes scaling
         if obj.get_xscale() == 'log':
             self.axis_options.append('xmode=log')
         if obj.get_yscale() == 'log':
             self.axis_options.append('ymode=log')
+        try:
+            if obj.get_zscale() == 'log':
+                self.axis_options.append('zmode=log')
+        except AttributeError:
+            pass
 
         if not obj.get_axisbelow():
             self.axis_options.append('axis on top')
@@ -132,20 +153,23 @@ class Axes(object):
                       'but neither height nor width of the plot are given. '
                       'Discard aspect ratio.')
 
-        # axis positions
-        xaxis_pos = obj.get_xaxis().label_position
-        if xaxis_pos == 'bottom':
-            # this is the default
-            pass
-        elif xaxis_pos == 'top':
-            self.axis_options.append('axis x line=top')
+        if not self.is_3d:
+            # axis positions
+            xaxis_pos = obj.get_xaxis().label_position
+            if xaxis_pos == 'bottom':
+                # this is the default
+                pass
+            else:
+                assert xaxis_pos == 'top'
+                self.axis_options.append('axis x line=top')
 
-        yaxis_pos = obj.get_yaxis().label_position
-        if yaxis_pos == 'left':
-            # this is the default
-            pass
-        elif yaxis_pos == 'right':
-            self.axis_options.append('axis y line=right')
+            yaxis_pos = obj.get_yaxis().label_position
+            if yaxis_pos == 'left':
+                # this is the default
+                pass
+            else:
+                assert yaxis_pos == 'right'
+                self.axis_options.append('axis y line=right')
 
         # get ticks
         self.axis_options.extend(
@@ -154,6 +178,12 @@ class Axes(object):
         self.axis_options.extend(
             _get_ticks(data, 'y', obj.get_yticks(), obj.get_yticklabels())
             )
+        try:
+            self.axis_options.extend(
+                _get_ticks(data, 'z', obj.get_zticks(), obj.get_zticklabels())
+                )
+        except AttributeError:
+            pass
 
         # Find tick direction
         # For new matplotlib versions, we could replace the direction getter by
@@ -213,6 +243,21 @@ class Axes(object):
             data, col, _ = color.mpl_color2xcolor(data, ygridcolor)
             if col != 'black':
                 self.axis_options.append('y grid style={%s}' % col)
+
+        try:
+            if obj.zaxis._gridOnMajor:
+                self.axis_options.append('zmajorgrids')
+            elif obj.zaxis._gridOnMinor:
+                self.axis_options.append('zminorgrids')
+
+            zlines = obj.get_zgridlines()
+            if zlines:
+                zgridcolor = zlines[0].get_color()
+                data, col, _ = color.mpl_color2xcolor(data, zgridcolor)
+                if col != 'black':
+                    self.axis_options.append('z grid style={%s}' % col)
+        except AttributeError:
+            pass
 
         # axis line styles
         # Assume that the bottom edge color is the color of the entire box.
