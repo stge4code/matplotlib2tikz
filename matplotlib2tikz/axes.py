@@ -137,16 +137,14 @@ class Axes(object):
         if xaxis_pos == 'bottom':
             # this is the default
             pass
-        else:
-            assert xaxis_pos == 'top'
+        elif xaxis_pos == 'top':
             self.axis_options.append('axis x line=top')
 
         yaxis_pos = obj.get_yaxis().label_position
         if yaxis_pos == 'left':
             # this is the default
             pass
-        else:
-            assert yaxis_pos == 'right'
+        elif yaxis_pos == 'right':
             self.axis_options.append('axis y line=right')
 
         # get ticks
