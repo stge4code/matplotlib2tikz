@@ -2,6 +2,7 @@
 #
 __all__ = [
   'annotate',
+  'axes3d',
   'basic_sin',
   'dual_axis',
   'errorband',
